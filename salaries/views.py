@@ -1,25 +1,6 @@
 from django.shortcuts import render, redirect
-import pyrebase
-from phe import paillier
-
-keyring = paillier.PaillierPrivateKeyring()
-public_key, private_key = paillier.generate_paillier_keypair()
-
-
 from .forms import SalaryForm
 from .models import Salary
-from .scripts import load_paillier_key_public, load_paillier_key_private
-
-config = {
-    "apiKey": "AIzaSyCgXKK7zuHdinSTkmQUw2fM-lCiMFl6M6g",
-    "authDomain": "softseguro-d6286.firebaseapp.com",
-    "projectId": "softseguro-d6286",
-    "databaseURL": "https://softseguro-d6286-default-rtdb.firebaseio.com/",
-    "storageBucket": "softseguro-d6286.appspot.com",
-    "messagingSenderId": "817108785109",
-    "appId": "1:817108785109:web:1ccf715102296412294f5c",
-    "measurementId": "G-H79N8NTSZ8",
-}
 
 
 
@@ -38,15 +19,10 @@ def add_salary(request):
             # Extrae la información del formulario
             name = form.cleaned_data['name']
             area = form.cleaned_data['area']
-            value = str(form.cleaned_data['value'])
+            value = form.cleaned_data['value']
 
-            # Cifra el valor del salario
-            encrypted_value = public_key.encrypt(value, precision=2)
 
-            # Convertir el ciphertext (que es un gran número entero) a una cadena
-            encrypted_value_str = encrypted_value.ciphertext()
-            print('encrypted_value_str: ', encrypted_value_str)
-            Salary.objects.create(name=name, area=area, value=encrypted_value_str )
+            Salary.objects.create(name=name, area=area, value=value )
 
             return redirect('index')  # Redirige a la misma página
     else:
@@ -63,28 +39,21 @@ def edit_salary(request, salary_id):
             # Extrae la información del formulario
             name = form.cleaned_data['name']
             area = form.cleaned_data['area']
-            value = str(form.cleaned_data['value'])
+            value = form.cleaned_data['value']
 
-            # Cifra el valor del salario
-            encrypted_value = public_key.encrypt(value, precision=2)
-
-            # Convertir el ciphertext (que es un gran número entero) a una cadena
-            encrypted_value_str = encrypted_value.ciphertext()
 
             salary.name = name
             salary.area = area
-            salary.value = encrypted_value_str
+            salary.value = value
             salary.save()
             return redirect('index')
     else:
-        salary_int = int(salary.value)
-        encrypted_number = paillier.EncryptedNumber(public_key, salary_int, exponent=0)
 
         initial_data = {
             'id': salary.id,
             'name': salary.name,
             'area': salary.area,
-            'value': int(private_key.decrypt(encrypted_number))
+            'value': salary.value
         }
         form = SalaryForm(initial=initial_data)
     return render(request, 'edit_salary.html', {'form': form, 'salary_id': salary_id})
@@ -97,7 +66,6 @@ def delete_salary(request, salary_id):
         # Elimina el salario de la base de datos
         salary_data.delete()
 
-        #db.child("Salaries").child(salary_id).remove()
         return redirect('index')
 
     return render(request, 'delete_confirm.html', {
@@ -106,20 +74,22 @@ def delete_salary(request, salary_id):
     })
 
 
-def sum_homomophric_encrypted_salaries(request):
+def sum_salaries(request):
+    # Obtiene todos los salarios
     salaries = Salary.objects.all()
-    print(salaries)
-    total = 0
+
+    # Inicializa el total de salarios por área
+    total_salaries_by_area = {}
+
+    # Suma los salarios por área
     for salary in salaries:
-        encrypted_value = int(salary.value)
-        print(encrypted_value)
-        encrypted_number = paillier.EncryptedNumber(public_key, encrypted_value, exponent=0)
-        total += encrypted_number
+        if salary.area in total_salaries_by_area:
+            total_salaries_by_area[salary.area] += salary.value
+        else:
+            total_salaries_by_area[salary.area] = salary.value
 
-    # Desencripta el valor total
-
-    #total = int(private_key.decrypt(total))
-
-    return render(request, 'total_salaries.html', {'total_encrypted': total})
+    return render(request, 'total_salaries.html', {
+        'total_salaries_by_area': total_salaries_by_area
+    })
 
 
