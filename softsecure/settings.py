@@ -87,7 +87,7 @@ WSGI_APPLICATION = 'softsecure.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
+        default=os.environ.get('DATABASE_URL', default='postgres://softsecurenocrypt_user:DkyccecYk7ghUGGcFRCupk65tNVZArj2@dpg-cnh14b8l6cac73akbf4g-a.oregon-postgres.render.com/softsecurenocrypt'),
 
     )
 
