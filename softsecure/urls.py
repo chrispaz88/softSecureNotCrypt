@@ -25,4 +25,5 @@ urlpatterns = [
     path('add_salary/', views.add_salary, name='add_salary'),
     path('edit_salary/<str:salary_id>/', views.edit_salary, name='edit_salary'),
     path('delete_salary/<str:salary_id>/', views.delete_salary, name='delete_salary'),
+    path('total_salaries/', views.sum_salaries, name='total_salaries'),
 ]
